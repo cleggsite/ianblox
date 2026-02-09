@@ -1,44 +1,31 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <link rel="icon" href="download.jpg">
-    <title>Roblox</title>
+  <meta charset="UTF-8">
+  <title>ianblox – Mafia</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
-    <nav>
-        <div>Discover</div>
-        <div>Avatar Shop</div>
-        <div>Create</div>
-        <div>Robux</div>
-    </nav>
-    <main><br><br><br>
-        <h1>Home</h1>
-        <h2>Connections (4)</h2>
-        <div id="friend-holder">
-            <div class="friendimgandname">
-                <div class="friend"><img src="phil.png">&nbsp;</div>
-                <p>Phil M</p>
-            </div>
-            <div class="friendimgandname">
-                <div class="friend"><img src="keegz.png">&nbsp;</div>
-                <p>Keegz</p>
-            </div>
-            <div class="friendimgandname">
-                <div class="friend"><img src="larry.png">&nbsp;</div>
-                <p>Larry H</p>
-            </div>
-            <div class="friendimgandname">
-                <div class="friend"><img src="brian.png">&nbsp;</div>
-                <p>Brian B</p>
-            </div>
-        </div>
-        <h2>Experiences</h2>
-    </main>
+  <h1>ianblox – Mafia</h1>
+
+  <div id="menu">
+    <input id="roomCode" placeholder="Room code">
+    <button onclick="createRoom()">Create Room</button>
+    <button onclick="joinRoom()">Join Room</button>
+  </div>
+
+  <div id="game" hidden>
+    <p id="phase"></p>
+    <p id="role"></p>
+    <ul id="players"></ul>
+    <button id="voteBtn" hidden onclick="vote()">Vote</button>
+  </div>
+
+  <script src="game.js"></script>
 </body>
 </html>
