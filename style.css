@@ -1,0 +1,58 @@
+nav {
+    position: fixed;
+    width: 100vw;
+    height: 50px;
+    left: 0;
+    top: 0;
+    background-color: rgb(0, 0, 0);
+    display: flex;
+    align-items: center;
+    color: white;
+}
+nav > div {
+    text-align: center;
+    padding-inline: 20px;
+    font-family: "Google Sans";
+    font-weight: 550;
+}
+main {
+    margin-inline: 7vw;
+    padding-inline: 5vw;
+    background-color: rgb(51, 51, 51);
+    margin-top: 20px;
+    height: 100vh;
+}
+#friend-holder {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.friendimgandname {
+    display: flex;
+    flex-direction: column;
+}
+.friendimgandname > div > img {
+    width: 100%;
+    height: 100%;
+    border-radius: 100%;
+}
+.friendimgandname > p {
+    color: white;
+    text-align: center;
+    font-family: "Google Sans";
+}
+.friend {
+    border-radius: 100px;
+    background-color: white;
+    width: 100px;
+    height: 100px;
+    z-index: 10000;
+}
+h1 {
+    color: white;
+    font-family: "Google Sans";
+}
+h2 {
+    color: white;
+    font-family: "Google Sans";
+}
