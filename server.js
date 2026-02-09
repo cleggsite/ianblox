@@ -1,51 +1,82 @@
-import WebSocket, { WebSocketServer } from "ws";
+// Replace with your Render WebSocket URL
+const WS_URL = "https://ianblox.onrender.com";
+const ws = new WebSocket(WS_URL);
 
-const wss = new WebSocketServer({ port: 8080 });
-const rooms = {};
+const playerId = Math.random().toString(36).slice(2);
+let roomCode = "";
+let isHost = false;
 
-function send(ws, type, data) {
-  ws.send(JSON.stringify({ type, data }));
+ws.onopen = () => console.log("Connected to server");
+
+ws.onmessage = e => {
+  const msg = JSON.parse(e.data);
+
+  if (msg.type === "update") updateGame(msg.data);
+};
+
+// ---------------- CREATE / JOIN ROOM ----------------
+function createRoom() {
+  roomCode = Math.random().toString(36).slice(2, 7).toUpperCase(); // random code
+  isHost = true;
+
+  ws.send(JSON.stringify({
+    type: "join",
+    data: { room: roomCode, id: playerId }
+  }));
+
+  showGameUI();
 }
 
-wss.on("connection", ws => {
-  ws.on("message", msg => {
-    const { type, data } = JSON.parse(msg);
+function joinRoom() {
+  roomCode = document.getElementById("roomInput").value.trim().toUpperCase();
+  if (!roomCode) return alert("Enter a room code");
 
-    if (type === "join") {
-      const { room, id } = data;
-      ws.id = id;
-      ws.room = room;
+  isHost = false;
 
-      rooms[room] ??= { players: {}, phase: "lobby" };
-      rooms[room].players[id] = { alive: true };
+  ws.send(JSON.stringify({
+    type: "join",
+    data: { room: roomCode, id: playerId }
+  }));
 
-      broadcast(room);
-    }
-
-    if (type === "start") {
-      const room = rooms[ws.room];
-      const ids = Object.keys(room.players);
-      const mafia = ids[Math.floor(Math.random() * ids.length)];
-
-      ids.forEach(id => {
-        room.players[id].role = id === mafia ? "Mafia" : "Villager";
-      });
-
-      room.phase = "day";
-      broadcast(ws.room);
-    }
-  });
-});
-
-function broadcast(roomCode) {
-  const payload = JSON.stringify({
-    type: "update",
-    data: rooms[roomCode]
-  });
-
-  wss.clients.forEach(c => {
-    if (c.room === roomCode) c.send(payload);
-  });
+  showGameUI();
 }
 
-console.log("Server running on port 8080");
+function showGameUI() {
+  document.getElementById("menu").hidden = true;
+  document.getElementById("game").hidden = false;
+
+  document.getElementById("roomInfo").innerText = "Room Code: " + roomCode;
+  document.getElementById("hostInfo").innerText = isHost ? "You are the host" : "";
+  document.getElementById("startBtn").hidden = !isHost;
+  document.getElementById("waiting").innerText = "Waiting for players...";
+}
+
+// ---------------- START GAME ----------------
+function startGame() {
+  ws.send(JSON.stringify({ type: "start" }));
+}
+
+// ---------------- UPDATE GAME ----------------
+function updateGame(data) {
+  // Update phase and role
+  document.getElementById("phase").innerText = "Phase: " + data.phase;
+  const me = data.players[playerId];
+  document.getElementById("role").innerText = "Role: " + (me?.role ?? "Unknown");
+
+  // Update player list
+  const list = document.getElementById("players");
+  list.innerHTML = "";
+  Object.keys(data.players).forEach(id => {
+    const li = document.createElement("li");
+    li.innerText = id === playerId ? "You" : "Player";
+    list.appendChild(li);
+  });
+
+  // Waiting message
+  const count = Object.keys(data.players).length;
+  if (data.phase === "lobby") {
+    document.getElementById("waiting").innerText = `Waiting for players... (${count})`;
+  } else {
+    document.getElementById("waiting").innerText = "";
+  }
+}
