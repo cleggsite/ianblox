@@ -1,21 +1,34 @@
 import WebSocket, { WebSocketServer } from "ws";
 
 const wss = new WebSocketServer({ port: 8080 });
-const rooms = {};      // Stores all rooms
-const createdRooms = {}; // Tracks rooms created with "Create Room"
+
+// Track all rooms
+const rooms = {};
+const createdRooms = {}; // Tracks which rooms were actually created (for join validation)
 
 wss.on("connection", ws => {
+
   ws.on("message", msg => {
     const { type, data } = JSON.parse(msg);
 
+    // ---------------- CREATE ROOM ----------------
     if (type === "create") {
-      // Player creates a new room
       const room = data.room;
-      createdRooms[room] = ws.id; // store host id
+
+      if (createdRooms[room]) {
+        ws.send(JSON.stringify({ type: "error", data: "Room code collision, try again" }));
+        return;
+      }
+
+      // Mark this room as created and set host
+      createdRooms[room] = ws.id;
       rooms[room] = { players: {}, phase: "lobby", host: ws.id };
+
+      // Send confirmation back to the client
       ws.send(JSON.stringify({ type: "created", room }));
     }
 
+    // ---------------- JOIN ROOM ----------------
     if (type === "join") {
       const { room, id } = data;
       ws.id = id;
@@ -30,6 +43,7 @@ wss.on("connection", ws => {
       broadcast(room);
     }
 
+    // ---------------- START GAME ----------------
     if (type === "start") {
       const room = rooms[ws.room];
       if (!room) return;
@@ -46,7 +60,7 @@ wss.on("connection", ws => {
         return;
       }
 
-      // assign 1 Mafia
+      // assign 1 random Mafia
       const mafiaIndex = Math.floor(Math.random() * ids.length);
       ids.forEach((id, i) => {
         room.players[id].role = i === mafiaIndex ? "Mafia" : "Villager";
@@ -55,6 +69,7 @@ wss.on("connection", ws => {
       room.phase = "day";
       broadcast(ws.room);
     }
+
   });
 });
 
