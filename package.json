@@ -1,0 +1,11 @@
+{
+  "name": "ianblox-server",
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}
