@@ -1,4 +1,4 @@
-const WS_URL = "wss://ianblox.onrender.com"; // your Render server
+const WS_URL = "https://ianblox.onrender.com"; // your Render server
 const ws = new WebSocket(WS_URL);
 
 const playerId = Math.random().toString(36).slice(2);
@@ -9,12 +9,13 @@ ws.onopen = () => console.log("Connected to server");
 
 ws.onmessage = e => {
   const msg = JSON.parse(e.data);
+
   if (msg.type === "update") updateGame(msg.data);
+  if (msg.type === "error") alert(msg.data);
 };
 
 // ---------------- CREATE / JOIN ROOM ----------------
 function createRoom() {
-  // Generate random code and show it
   roomCode = Math.random().toString(36).slice(2, 7).toUpperCase();
   isHost = true;
 
@@ -26,7 +27,7 @@ function joinRoom() {
   roomCode = document.getElementById("roomInput").value.trim().toUpperCase();
   if (!roomCode) return alert("Enter a room code");
 
-  // If you just created the room, isHost stays true
+  // if we just created it, keep isHost true
   if (!isHost) isHost = false;
 
   ws.send(JSON.stringify({
@@ -67,7 +68,6 @@ function updateGame(data) {
     list.appendChild(li);
   });
 
-  // Waiting message
   const count = Object.keys(data.players).length;
   if (data.phase === "lobby") {
     document.getElementById("waiting").innerText = `Waiting for players... (${count})`;
