@@ -1,82 +1,58 @@
-// Replace with your Render WebSocket URL
-const WS_URL = "https://ianblox.onrender.com";
-const ws = new WebSocket(WS_URL);
+import WebSocket, { WebSocketServer } from "ws";
 
-const playerId = Math.random().toString(36).slice(2);
-let roomCode = "";
-let isHost = false;
+const wss = new WebSocketServer({ port: 8080 });
+const rooms = {};
 
-ws.onopen = () => console.log("Connected to server");
+wss.on("connection", ws => {
+  ws.on("message", msg => {
+    const { type, data } = JSON.parse(msg);
 
-ws.onmessage = e => {
-  const msg = JSON.parse(e.data);
+    if (type === "join") {
+      const { room, id } = data;
+      ws.id = id;
+      ws.room = room;
 
-  if (msg.type === "update") updateGame(msg.data);
-};
+      // create room if it doesn't exist
+      rooms[room] ??= { players: {}, phase: "lobby" };
+      rooms[room].players[id] = { alive: true };
 
-// ---------------- CREATE / JOIN ROOM ----------------
-function createRoom() {
-  roomCode = Math.random().toString(36).slice(2, 7).toUpperCase(); // random code
-  isHost = true;
+      broadcast(room);
+    }
 
-  ws.send(JSON.stringify({
-    type: "join",
-    data: { room: roomCode, id: playerId }
-  }));
+    if (type === "start") {
+      const room = rooms[ws.room];
+      const ids = Object.keys(room?.players ?? {});
 
-  showGameUI();
-}
+      if (!room) return;
+      if (ids.length < 2) {
+        ws.send(JSON.stringify({ type: "error", data: "Need at least 2 players to start" }));
+        return;
+      }
 
-function joinRoom() {
-  roomCode = document.getElementById("roomInput").value.trim().toUpperCase();
-  if (!roomCode) return alert("Enter a room code");
+      // assign 1 random Mafia
+      const mafiaIndex = Math.floor(Math.random() * ids.length);
+      ids.forEach((id, index) => {
+        room.players[id].role = index === mafiaIndex ? "Mafia" : "Villager";
+      });
 
-  isHost = false;
+      room.phase = "day";
+      broadcast(ws.room);
+    }
+  });
+});
 
-  ws.send(JSON.stringify({
-    type: "join",
-    data: { room: roomCode, id: playerId }
-  }));
+function broadcast(roomCode) {
+  const room = rooms[roomCode];
+  if (!room) return;
 
-  showGameUI();
-}
-
-function showGameUI() {
-  document.getElementById("menu").hidden = true;
-  document.getElementById("game").hidden = false;
-
-  document.getElementById("roomInfo").innerText = "Room Code: " + roomCode;
-  document.getElementById("hostInfo").innerText = isHost ? "You are the host" : "";
-  document.getElementById("startBtn").hidden = !isHost;
-  document.getElementById("waiting").innerText = "Waiting for players...";
-}
-
-// ---------------- START GAME ----------------
-function startGame() {
-  ws.send(JSON.stringify({ type: "start" }));
-}
-
-// ---------------- UPDATE GAME ----------------
-function updateGame(data) {
-  // Update phase and role
-  document.getElementById("phase").innerText = "Phase: " + data.phase;
-  const me = data.players[playerId];
-  document.getElementById("role").innerText = "Role: " + (me?.role ?? "Unknown");
-
-  // Update player list
-  const list = document.getElementById("players");
-  list.innerHTML = "";
-  Object.keys(data.players).forEach(id => {
-    const li = document.createElement("li");
-    li.innerText = id === playerId ? "You" : "Player";
-    list.appendChild(li);
+  const payload = JSON.stringify({
+    type: "update",
+    data: room
   });
 
-  // Waiting message
-  const count = Object.keys(data.players).length;
-  if (data.phase === "lobby") {
-    document.getElementById("waiting").innerText = `Waiting for players... (${count})`;
-  } else {
-    document.getElementById("waiting").innerText = "";
-  }
+  wss.clients.forEach(c => {
+    if (c.room === roomCode) c.send(payload);
+  });
 }
+
+console.log("Server running on port 8080");
