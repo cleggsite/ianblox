@@ -1,4 +1,4 @@
-const WS_URL = "https://ianblox.onrender.com";
+const WS_URL = "wss://ianblox.onrender.com"; // Replace with your Render server URL
 const ws = new WebSocket(WS_URL);
 
 const playerId = Math.random().toString(36).slice(2);
@@ -9,10 +9,10 @@ ws.onopen = () => console.log("Connected to server");
 
 ws.onmessage = e => {
   const msg = JSON.parse(e.data);
+
   if (msg.type === "update") updateGame(msg.data);
   if (msg.type === "error") alert(msg.data);
   if (msg.type === "created") {
-    // room successfully created
     roomCode = msg.room;
     isHost = true;
     showGameUI();
@@ -59,6 +59,7 @@ function startGame() {
 // ---------------- UPDATE GAME ----------------
 function updateGame(data) {
   document.getElementById("phase").innerText = "Phase: " + data.phase;
+
   const me = data.players[playerId];
   document.getElementById("role").innerText = "Role: " + (me?.role ?? "Unknown");
 
