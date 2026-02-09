@@ -1,4 +1,4 @@
-const WS_URL = "https://ianblox.onrender.com"; // your Render server
+const WS_URL = "https://ianblox.onrender.com";
 const ws = new WebSocket(WS_URL);
 
 const playerId = Math.random().toString(36).slice(2);
@@ -9,32 +9,34 @@ ws.onopen = () => console.log("Connected to server");
 
 ws.onmessage = e => {
   const msg = JSON.parse(e.data);
-
   if (msg.type === "update") updateGame(msg.data);
   if (msg.type === "error") alert(msg.data);
+  if (msg.type === "created") {
+    // room successfully created
+    roomCode = msg.room;
+    isHost = true;
+    showGameUI();
+  }
 };
 
 // ---------------- CREATE / JOIN ROOM ----------------
 function createRoom() {
-  roomCode = Math.random().toString(36).slice(2, 7).toUpperCase();
-  isHost = true;
-
-  document.getElementById("newRoomCode").innerText =
-    "Room Code: " + roomCode + " (share this with friends)";
+  const newCode = Math.random().toString(36).slice(2, 7).toUpperCase();
+  ws.send(JSON.stringify({ type: "create", data: { room: newCode } }));
+  document.getElementById("newRoomCode").innerText = "Creating room...";
 }
 
 function joinRoom() {
-  roomCode = document.getElementById("roomInput").value.trim().toUpperCase();
-  if (!roomCode) return alert("Enter a room code");
-
-  // if we just created it, keep isHost true
-  if (!isHost) isHost = false;
+  const inputCode = document.getElementById("roomInput").value.trim().toUpperCase();
+  if (!inputCode) return alert("Enter a room code");
 
   ws.send(JSON.stringify({
     type: "join",
-    data: { room: roomCode, id: playerId }
+    data: { room: inputCode, id: playerId }
   }));
 
+  roomCode = inputCode;
+  isHost = false;
   showGameUI();
 }
 
@@ -50,13 +52,13 @@ function showGameUI() {
 
 // ---------------- START GAME ----------------
 function startGame() {
+  if (!isHost) return alert("Only host can start the game");
   ws.send(JSON.stringify({ type: "start" }));
 }
 
 // ---------------- UPDATE GAME ----------------
 function updateGame(data) {
   document.getElementById("phase").innerText = "Phase: " + data.phase;
-
   const me = data.players[playerId];
   document.getElementById("role").innerText = "Role: " + (me?.role ?? "Unknown");
 
