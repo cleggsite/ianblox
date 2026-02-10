@@ -1,4 +1,4 @@
-const WS_URL = "https://ianblox.onrender.com"; // Replace with your Render server URL
+const WS_URL = "wss://ianblox.onrender.com"; // Replace with your Render server URL
 const ws = new WebSocket(WS_URL);
 
 const playerId = Math.random().toString(36).slice(2);
