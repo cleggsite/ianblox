@@ -1,80 +1,77 @@
-const WS_URL = "wss://ianblox.onrender.com"; // Replace with your Render server URL
+const WS_URL = "wss://ianblox.onrender.com"; // HTTPS = WSS REQUIRED
 const ws = new WebSocket(WS_URL);
 
-const playerId = Math.random().toString(36).slice(2);
+const playerId = crypto.randomUUID();
 let roomCode = "";
 let isHost = false;
-
-ws.onopen = () => console.log("Connected to server");
 
 ws.onmessage = e => {
   const msg = JSON.parse(e.data);
 
-  if (msg.type === "update") updateGame(msg.data);
-  if (msg.type === "error") alert(msg.data);
   if (msg.type === "created") {
     roomCode = msg.room;
     isHost = true;
-    showGameUI();
+    enterGame();
   }
+
+  if (msg.type === "update") updateGame(msg.data);
+  if (msg.type === "error") alert(msg.data);
 };
 
-// ---------------- CREATE / JOIN ROOM ----------------
+// ---------------- CREATE ----------------
 function createRoom() {
-  const newCode = Math.random().toString(36).slice(2, 7).toUpperCase();
-  ws.send(JSON.stringify({ type: "create", data: { room: newCode } }));
-  document.getElementById("newRoomCode").innerText = "Creating room...";
+  const code = Math.random().toString(36).slice(2, 7).toUpperCase();
+
+  ws.send(JSON.stringify({
+    type: "create",
+    data: { room: code, id: playerId }
+  }));
 }
 
+// ---------------- JOIN ----------------
 function joinRoom() {
-  const inputCode = document.getElementById("roomInput").value.trim().toUpperCase();
-  if (!inputCode) return alert("Enter a room code");
+  const code = document.getElementById("roomInput").value.trim().toUpperCase();
+  if (!code) return alert("Enter a room code");
+
+  roomCode = code;
+  isHost = false;
 
   ws.send(JSON.stringify({
     type: "join",
-    data: { room: inputCode, id: playerId }
+    data: { room: code, id: playerId }
   }));
 
-  roomCode = inputCode;
-  isHost = false;
-  showGameUI();
+  enterGame();
 }
 
-function showGameUI() {
+// ---------------- UI ----------------
+function enterGame() {
   document.getElementById("menu").hidden = true;
   document.getElementById("game").hidden = false;
 
-  document.getElementById("roomInfo").innerText = "Room Code: " + roomCode;
-  document.getElementById("hostInfo").innerText = isHost ? "You are the host" : "";
+  document.getElementById("roomInfo").innerText = "Room: " + roomCode;
   document.getElementById("startBtn").hidden = !isHost;
-  document.getElementById("waiting").innerText = "Waiting for players...";
 }
 
-// ---------------- START GAME ----------------
+// ---------------- START ----------------
 function startGame() {
-  if (!isHost) return alert("Only host can start the game");
   ws.send(JSON.stringify({ type: "start" }));
 }
 
-// ---------------- UPDATE GAME ----------------
+// ---------------- UPDATE ----------------
 function updateGame(data) {
   document.getElementById("phase").innerText = "Phase: " + data.phase;
 
   const me = data.players[playerId];
-  document.getElementById("role").innerText = "Role: " + (me?.role ?? "Unknown");
+  document.getElementById("role").innerText =
+    "Role: " + (me?.role ?? "Unknown");
 
   const list = document.getElementById("players");
   list.innerHTML = "";
+
   Object.keys(data.players).forEach(id => {
     const li = document.createElement("li");
     li.innerText = id === playerId ? "You" : "Player";
     list.appendChild(li);
   });
-
-  const count = Object.keys(data.players).length;
-  if (data.phase === "lobby") {
-    document.getElementById("waiting").innerText = `Waiting for players... (${count})`;
-  } else {
-    document.getElementById("waiting").innerText = "";
-  }
 }
