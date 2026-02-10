@@ -1,75 +1,110 @@
-import WebSocket, { WebSocketServer } from "ws";
+import { WebSocketServer } from "ws";
 
-const wss = new WebSocketServer({ port: 8080 });
+const wss = new WebSocketServer({
+  port: process.env.PORT || 8080
+});
 
-// Track all rooms
-const rooms = {};
-const createdRooms = {}; // Tracks which rooms were actually created (for join validation)
+const rooms = {}; // roomCode -> { host, phase, players }
 
 wss.on("connection", ws => {
 
-  ws.on("message", msg => {
-    const { type, data } = JSON.parse(msg);
+  ws.on("message", raw => {
+    let msg;
+    try {
+      msg = JSON.parse(raw);
+    } catch {
+      return;
+    }
 
-    // ---------------- CREATE ROOM ----------------
+    const { type, data } = msg;
+
+    // -------- CREATE ROOM --------
     if (type === "create") {
-      const room = data.room;
+      const { room, id } = data;
 
-      if (createdRooms[room]) {
-        ws.send(JSON.stringify({ type: "error", data: "Room code collision, try again" }));
+      if (rooms[room]) {
+        ws.send(JSON.stringify({
+          type: "error",
+          data: "Room already exists"
+        }));
         return;
       }
 
-      // Mark this room as created and set host
-      createdRooms[room] = ws.id;
-      rooms[room] = { players: {}, phase: "lobby", host: ws.id };
-
-      // Send confirmation back to the client
-      ws.send(JSON.stringify({ type: "created", room }));
-    }
-
-    // ---------------- JOIN ROOM ----------------
-    if (type === "join") {
-      const { room, id } = data;
       ws.id = id;
       ws.room = room;
 
-      if (!createdRooms[room]) {
-        ws.send(JSON.stringify({ type: "error", data: "Room does not exist" }));
+      rooms[room] = {
+        host: id,
+        phase: "lobby",
+        players: {
+          [id]: { alive: true }
+        }
+      };
+
+      ws.send(JSON.stringify({
+        type: "created",
+        room
+      }));
+
+      broadcast(room);
+    }
+
+    // -------- JOIN ROOM --------
+    if (type === "join") {
+      const { room, id } = data;
+
+      if (!rooms[room]) {
+        ws.send(JSON.stringify({
+          type: "error",
+          data: "Room does not exist"
+        }));
         return;
       }
+
+      ws.id = id;
+      ws.room = room;
 
       rooms[room].players[id] = { alive: true };
       broadcast(room);
     }
 
-    // ---------------- START GAME ----------------
+    // -------- START GAME --------
     if (type === "start") {
       const room = rooms[ws.room];
       if (!room) return;
 
-      const ids = Object.keys(room.players);
-
       if (ws.id !== room.host) {
-        ws.send(JSON.stringify({ type: "error", data: "Only the host can start the game" }));
+        ws.send(JSON.stringify({
+          type: "error",
+          data: "Only host can start"
+        }));
         return;
       }
 
+      const ids = Object.keys(room.players);
       if (ids.length < 2) {
-        ws.send(JSON.stringify({ type: "error", data: "Need at least 2 players to start" }));
+        ws.send(JSON.stringify({
+          type: "error",
+          data: "Need at least 2 players"
+        }));
         return;
       }
 
-      // assign 1 random Mafia
-      const mafiaIndex = Math.floor(Math.random() * ids.length);
-      ids.forEach((id, i) => {
-        room.players[id].role = i === mafiaIndex ? "Mafia" : "Villager";
+      const mafia = ids[Math.floor(Math.random() * ids.length)];
+      ids.forEach(id => {
+        room.players[id].role =
+          id === mafia ? "Mafia" : "Villager";
       });
 
       room.phase = "day";
       broadcast(ws.room);
     }
+  });
 
+  ws.on("close", () => {
+    if (!ws.room || !rooms[ws.room]) return;
+    delete rooms[ws.room].players[ws.id];
+    broadcast(ws.room);
   });
 });
 
@@ -77,11 +112,16 @@ function broadcast(roomCode) {
   const room = rooms[roomCode];
   if (!room) return;
 
-  const payload = JSON.stringify({ type: "update", data: room });
+  const payload = JSON.stringify({
+    type: "update",
+    data: room
+  });
 
-  wss.clients.forEach(c => {
-    if (c.room === roomCode) c.send(payload);
+  wss.clients.forEach(client => {
+    if (client.room === roomCode) {
+      client.send(payload);
+    }
   });
 }
 
-console.log("Server running on port 8080");
+console.log("Server running");
