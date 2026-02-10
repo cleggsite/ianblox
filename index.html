@@ -7,26 +7,30 @@
 </head>
 <body>
 
-  <h1>ianblox – Mafia</h1>
+<h1>ianblox – Mafia</h1>
 
-  <div id="menu">
-    <button onclick="createRoom()">Create Game</button>
-    <p id="newRoomCode"></p>
-    <p>OR</p>
-    <input id="roomInput" placeholder="Enter room code">
-    <button onclick="joinRoom()">Join Room</button>
-  </div>
+<div id="menu">
+  <button onclick="createRoom()">Create Game</button>
+  <p id="newRoomCode"></p>
 
-  <div id="game" hidden>
-    <p id="roomInfo"></p>
-    <p id="hostInfo"></p>
-    <p id="phase">Phase:</p>
-    <p id="role">Role:</p>
-    <ul id="players"></ul>
-    <button id="startBtn" hidden onclick="startGame()">Start Game</button>
-    <p id="waiting"></p>
-  </div>
+  <p>OR</p>
 
-  <script src="game.js"></script>
+  <input id="roomInput" placeholder="Room code">
+  <button onclick="joinRoom()">Join Game</button>
+</div>
+
+<div id="game" hidden>
+  <p id="roomInfo"></p>
+  <p id="phase"></p>
+  <p id="role"></p>
+
+  <ul id="players"></ul>
+
+  <button id="startBtn" onclick="startGame()" hidden>
+    Start Game
+  </button>
+</div>
+
+<script src="game.js"></script>
 </body>
 </html>
