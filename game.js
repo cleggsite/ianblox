@@ -1,4 +1,4 @@
-const WS_URL = "wss://ianblox.onrender.com"; // HTTPS = WSS REQUIRED
+const WS_URL = "wss://ianblox.onrender.com";
 const ws = new WebSocket(WS_URL);
 
 const playerId = crypto.randomUUID();
@@ -11,6 +11,10 @@ ws.onmessage = e => {
   if (msg.type === "created") {
     roomCode = msg.room;
     isHost = true;
+
+    document.getElementById("newRoomCode").innerText =
+      "Room Code: " + roomCode;
+
     enterGame();
   }
 
@@ -18,9 +22,11 @@ ws.onmessage = e => {
   if (msg.type === "error") alert(msg.data);
 };
 
-// ---------------- CREATE ----------------
+// ---------- CREATE ----------
 function createRoom() {
-  const code = Math.random().toString(36).slice(2, 7).toUpperCase();
+  const code = Math.random().toString(36)
+    .slice(2, 7)
+    .toUpperCase();
 
   ws.send(JSON.stringify({
     type: "create",
@@ -28,10 +34,13 @@ function createRoom() {
   }));
 }
 
-// ---------------- JOIN ----------------
+// ---------- JOIN ----------
 function joinRoom() {
-  const code = document.getElementById("roomInput").value.trim().toUpperCase();
-  if (!code) return alert("Enter a room code");
+  const code = document.getElementById("roomInput")
+    .value.trim()
+    .toUpperCase();
+
+  if (!code) return alert("Enter a code");
 
   roomCode = code;
   isHost = false;
@@ -44,23 +53,26 @@ function joinRoom() {
   enterGame();
 }
 
-// ---------------- UI ----------------
+// ---------- UI ----------
 function enterGame() {
   document.getElementById("menu").hidden = true;
   document.getElementById("game").hidden = false;
 
-  document.getElementById("roomInfo").innerText = "Room: " + roomCode;
+  document.getElementById("roomInfo").innerText =
+    "Room: " + roomCode;
+
   document.getElementById("startBtn").hidden = !isHost;
 }
 
-// ---------------- START ----------------
+// ---------- START ----------
 function startGame() {
   ws.send(JSON.stringify({ type: "start" }));
 }
 
-// ---------------- UPDATE ----------------
+// ---------- UPDATE ----------
 function updateGame(data) {
-  document.getElementById("phase").innerText = "Phase: " + data.phase;
+  document.getElementById("phase").innerText =
+    "Phase: " + data.phase;
 
   const me = data.players[playerId];
   document.getElementById("role").innerText =
