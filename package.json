@@ -1,9 +1,14 @@
 {
-  "name": "ianblox-server",
+  "name": "ianblox-mafia",
   "version": "1.0.0",
+  "description": "WebSocket Mafia game server",
+  "main": "server.js",
   "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
   "engines": {
-    "node": "22.x"
+    "node": ">=18"
   },
   "dependencies": {
     "ws": "^8.16.0"
