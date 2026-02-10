@@ -1,15 +1,28 @@
 import { WebSocketServer } from "ws";
+import http from "http";
 
 const PORT = process.env.PORT || 8080;
-const wss = new WebSocketServer({ port: PORT });
+
+// --- Minimal HTTP server for Render ---
+const server = http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end("Server alive");
+});
+
+server.listen(PORT, () => console.log("HTTP server running on port", PORT));
+
+// --- WebSocket server ---
+const wss = new WebSocketServer({ server });
 
 const rooms = {};
 
 wss.on("connection", ws => {
   ws.on("message", raw => {
-    const { type, data } = JSON.parse(raw);
+    let msg;
+    try { msg = JSON.parse(raw); } catch { return; }
+    const { type, data } = msg;
 
-    // CREATE ROOM
+    // --- CREATE ROOM ---
     if (type === "create") {
       const room = data.room;
       const id = data.id;
@@ -25,16 +38,14 @@ wss.on("connection", ws => {
       rooms[room] = {
         host: id,
         phase: "lobby",
-        players: {
-          [id]: { alive: true }
-        }
+        players: { [id]: { alive: true } }
       };
 
       ws.send(JSON.stringify({ type: "created", room }));
       broadcast(room);
     }
 
-    // JOIN ROOM
+    // --- JOIN ROOM ---
     if (type === "join") {
       const { room, id } = data;
 
@@ -50,7 +61,7 @@ wss.on("connection", ws => {
       broadcast(room);
     }
 
-    // START GAME
+    // --- START GAME ---
     if (type === "start") {
       const room = rooms[ws.room];
       if (!room) return;
@@ -75,17 +86,19 @@ wss.on("connection", ws => {
       broadcast(ws.room);
     }
   });
+
+  ws.on("close", () => {
+    if (!ws.room || !rooms[ws.room]) return;
+    delete rooms[ws.room].players[ws.id];
+    broadcast(ws.room);
+  });
 });
 
 function broadcast(roomCode) {
-  const payload = JSON.stringify({
-    type: "update",
-    data: rooms[roomCode]
-  });
-
+  const payload = JSON.stringify({ type: "update", data: rooms[roomCode] });
   wss.clients.forEach(c => {
     if (c.room === roomCode) c.send(payload);
   });
 }
 
-console.log("Server running on port", PORT);
+console.log("WebSocket server running on port", PORT);
